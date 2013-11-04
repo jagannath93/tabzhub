@@ -1,0 +1,99 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<script>
+  /*$(document).ready(function(){
+  var data = {
+  name:'archi sites',
+  urls:'sjadksajkdjsakd,dshfkhfsdjfhkdsj,kdslfsdjfklsdjf,iou34789327498234,djfidofodufgi',
+  created_on:'3423432432',
+  type:true
+  }
+  
+  $.ajax({
+   type: "GET",
+    url: '192.168.121.147:8082/save',
+     data: data,
+      success: alert("sent.. :)")
+       }); 
+  });
+  
+    var tab_titles = new Array();*/
+</script>
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+<link rel="stylesheet" href="static/bootstrap.min.css" type="text/css" />
+
+<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+<script src="static/bootstrap.min.js"></script>
+<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+<!--link rel="stylesheet" href="/resources/demos/style.css" /-->
+<style>
+  .ui-autocomplete-category {
+    font-weight: bold;
+  padding: .2em .4em;
+  margin: .8em 0 .2em;
+          line-height: 1.5;
+  }
+</style>
+<script>
+
+
+  $.widget( "custom.catcomplete", $.ui.autocomplete, {
+  _renderMenu: function( ul, items ) {
+  var that = this,
+  currentCategory = "";
+  $.each( items, function( index, item ) {
+    if ( item.category != currentCategory ) {
+    ul.append( "<li class='ui-autocomplete-category'>" + item.category + "</li>" );
+    currentCategory = item.category;
+    }
+    that._renderItemData( ul, item );
+    });
+  }
+  });
+</script>
+<script>
+ $(document).ready(function(){
+     var data =  "{{data|escape}}";
+     console.log(data);
+ 
+ var tab_titles = new Array();
+ var process = function(data)
+ {
+    for(i=0;i<data.length;i++)
+    {
+      var tmp = new Object();
+      tmp[label] = data[name];
+      tmp[category] = data[type]
+      tab_titles.push(tmp);
+    }
+    
+  }
+
+/*
+  $.ajax({
+   type: "GET",
+    url: '192.168.121.147:8082/fetch',
+     //data: data,
+      success: process
+       //dataType: dataType
+       });*/
+
+  $( "#search" ).catcomplete({
+    delay: 0,
+    source: tab_titles
+  });
+});
+</script>
+</head>
+<body>
+  <div class="container" style="margin-left:auto;">
+    <h3><b>{{data.nickname}}</b></h3></br>
+    <p>{{data.email}}</p></br>
+     
+    <label for="search">Search: </label>
+    <input id="search" type="text" placeholder="Search" class="input-xlarge"/>
+   </div>
+</body>
+</html>
