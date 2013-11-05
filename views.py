@@ -1,6 +1,5 @@
 # Python imports
 import datetime
-import iso8601
 import urllib
 import cgi
 import wsgiref.handlers
