@@ -13,7 +13,7 @@ class Session(db.Model):
   name = db.StringProperty()
   urls = db.StringProperty(multiline=True)
   created_on = db.DateTimeProperty(auto_now_add = 1)
-  type = db.BooleanProperty(default=0)
+  public = db.BooleanProperty(default=False)
 
   def __str__(self):
     return 'Session: %s' %self.name
