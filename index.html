@@ -2,7 +2,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<script>
+<!--script>
   /*$(document).ready(function(){
   var data = {
   name:'archi sites',
@@ -20,7 +20,7 @@
   });
   
     var tab_titles = new Array();*/
-</script>
+</script-->
 <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
 <link rel="stylesheet" href="static/bootstrap.min.css" type="text/css" />
 
@@ -53,9 +53,9 @@
   }
   });
 </script>
-<script>
+<script type="text/javascript">
  $(document).ready(function(){
-     var data =  "{{data|escape}}";
+     var data =  "";
      console.log(data);
  
  var tab_titles = new Array();
@@ -89,11 +89,88 @@
 </head>
 <body>
   <div class="container" style="margin-left:auto;">
-    <h3><b>{{data.nickname}}</b></h3></br>
-    <p>{{data.email}}</p></br>
-     
-    <label for="search">Search: </label>
-    <input id="search" type="text" placeholder="Search" class="input-xlarge"/>
-   </div>
+    <div id="user_name_box"><b>name</b></div></br>
+    <p>{{email}}</p></br>
+    <button id="authorize-button" style="visibility: hidden">Authorize</button>
+<script type="text/javascript">
+	var clientId = '945319337601-scascfjvnc38vapo0q7f0advh674k0ei.apps.googleusercontent.com';
+
+  var apiKey = 'AIzaSyDZ1WclkQWIPTpbm6kSGyAyVOpSSuL7OXY';
+
+  var scopes = ['https://www.googleapis.com/auth/plus.me','https://www.googleapis.com/auth/plus.login'];
+
+  function handleClientLoad() {
+    // Step 2: Reference the API key
+    gapi.client.setApiKey(apiKey);
+    window.setTimeout(checkAuth,1);
+  }
+  
+  function checkAuth() {
+    gapi.auth.authorize({client_id: clientId, scope: scopes, immediate: true}, handleAuthResult);
+  }
+
+  function handleAuthResult(authResult) {
+    var authorizeButton = document.getElementById('authorize-button');
+    if (authResult && !authResult.error) {
+      authorizeButton.style.visibility = 'hidden';
+      makeApiCall();
+    } else {
+      authorizeButton.style.visibility = '';
+      authorizeButton.onclick = handleAuthClick;
+    }
+  }
+
+  function handleAuthClick(event) {
+    // Step 3: get authorization to use private data
+    gapi.auth.authorize({client_id: clientId, scope: scopes, immediate: false}, handleAuthResult);
+    return false;
+  }
+
+  // Load the API and make an API call.  Display the results on the screen.
+  function makeApiCall() {
+    // Step 4: Load the Google+ API
+    gapi.client.load('plus', 'v1', function() {
+      // Step 5: Assemble the API request
+      var request1 = gapi.client.plus.people.get({
+        'userId': 'me'
+      });
+      var request2 = gapi.client.plus.people.list({
+  			'userId' : 'me',
+  			'collection' : 'visible'
+			});
+
+      // Step 6: Execute the API request
+      request1.execute(function(resp) {
+        var heading = document.createElement('h4');
+        var image = document.createElement('img');
+        image.src = resp.image.url;
+        heading.appendChild(image);
+        heading.appendChild(document.createTextNode(resp.displayName));
+
+        document.getElementById('user_name_box').appendChild(heading);
+      });
+      
+      request2.execute(function(resp) {
+      	console.log("Inside req2");
+      	console.log(resp);
+				var numItems = resp.items.length;
+				var tmp ="<b>Google+ Friends list</b><br>";
+				for (var i = 0; i < numItems; i++) {
+					tmp = tmp + "<div class='friend'><img src='"+ resp.items[i].image.url +"' alt='profile_pic'/><p>"+ resp.items[i].displayName +"</p></div><br>";
+				}
+				$("div#friends_box").html(tmp); 
+			});
+      
+    });
+  }
+</script>
+<script src="https://apis.google.com/js/client.js?onload=handleClientLoad"></script>
+
+<div id="user_box"></div>
+<div id="friends_box"></div>
+{{content}}
+<label for="search">Search: </label>
+<input id="search" type="text" placeholder="Search" class="input-xlarge"/>
+</div>
 </body>
 </html>

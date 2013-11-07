@@ -3,7 +3,7 @@
 # Python imports
 import datetime
 import urllib
-import httplib2
+#import httplib2
 import logging
 import cgi
 import wsgiref.handlers
@@ -15,10 +15,10 @@ import os
 from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext.webapp import template
-from apiclient import discovery
-from oauth2client import appengine
-from oauth2client import client
-from google.appengine.api import memcache
+#from apiclient import discovery
+#from oauth2client import appengine
+#from oauth2client import client
+#from google.appengine.api import memcache
 
 import webapp2
 import jinja2
@@ -28,6 +28,7 @@ JINJA_ENVIRONMENT = jinja2.Environment(
         autoescape=True,
         extensions=['jinja2.ext.autoescape'])
 
+'''
 CLIENT_SECRETS = os.path.join(os.path.dirname(__file__), 'client_secrets.json')
 
 MISSING_CLIENT_SECRETS_MESSAGE = """
@@ -35,7 +36,7 @@ MISSING_CLIENT_SECRETS_MESSAGE = """
 <code>%s</code>.
 """ % CLIENT_SECRETS
 
-"""
+
 http = httplib2.Http(memcache)
 service = discovery.build("plus", "v1", http=http)
 decorator = appengine.oauth2decorator_from_clientsecrets(
@@ -45,7 +46,7 @@ decorator = appengine.oauth2decorator_from_clientsecrets(
                   'https://www.googleapis.com/auth/plus.me', 
                 ],
                 message=MISSING_CLIENT_SECRETS_MESSAGE)
-"""
+'''
 
 class Guser(db.Model):
   email = db.EmailProperty()
@@ -61,8 +62,8 @@ class Session(db.Model):
   name = db.StringProperty(required=True)
   urls = db.TextProperty()
   created_on = db.DateTimeProperty(auto_now_add = 1)
-  public = db.BooleanProperty(default=0)
-  share = db.BooleanProperty(default=0)
+  public = db.BooleanProperty(default=False)
+  share = db.BooleanProperty(default=False)
   hits = db.StringProperty(default="0")
 
   def __str__(self):
@@ -87,7 +88,7 @@ class Index(webapp2.RequestHandler):
       if guser is None:
         print "guser is None."
         moment = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
-        guser = Guser(email = user.email(), name=user.nickname())
+        guser = Guser(email = user.email(), name=user.nickname(), registered_on=datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
         guser.put()
       else:
         print "guser is already registered!!"
@@ -165,18 +166,21 @@ class Save(webapp2.RequestHandler):
 
         #sessions = Session.gql("Where user = "+ guser).get()
 
+         
         name = self.request.get('name')
         urls = self.request.get('urls')
-        created_on = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')  #self.request.get('created_on')
+        created_on = datetime.datetime.now()  #self.request.get('created_on')
         tmp = self.request.get('type')
-        if tmp == 1:  # 0-private, 1 - public(default)
-          type = True
-        else:
-          type = False
-        session = Session(name=name, urls=urls, \
-                  created_on=created_on, public = tmp)
+        _type = False
+        if tmp is 1:  # 0-private, 1 - public(default)
+          _type = True
+                  
+        session = Session(user=guser, name=name, urls=urls, \
+                  created_on=created_on)
         session.put()
-        self.response.out.write("Saved Successfully :)")
+        guser.sessions_no = guser.sessions_no + 1
+        guser.put()
+        self.response.out.write("ok")  #"Saved Successfully :)")
       else: # Means user logged in to his google account but not have account yet in 'tabzhub'.
         self.response.out.write("Invalid: Register to 'tabZhub' first!!")
     else:
