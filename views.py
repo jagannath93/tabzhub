@@ -186,6 +186,30 @@ class Save(webapp2.RequestHandler):
     else:
       self.redirect(users.create_login_url(self.request.uri))
 
+class FetchById(webapp2.RequestHandler):
+  def post(self):
+	user = users.get_current_user()
+	if user:
+	  guser = gusers = Guser.all().filter("email = ", user.email()).get()
+	  if guser is not None:
+		_id = self.request.get("id")
+		session = Session.get_by_id( int(_id) )
+		if session is not None:
+		  if session.public is True or session.share is True:
+		    sess = {}
+            sess['urls'] = session.urls
+            sess['created_on'] = session.created_on.strftime('%Y-%m-%dT%H:%M:%S')
+            sess['name'] = session.name
+			self.response.out.write(json.dumps(sess))
+		  else: # Means session neither shared privately or publicly
+		    self.response.out.write("Invalid Key")
+		else: # Means session not found
+		  self.response.out.write("Invalid Key")
+	  else: # Means user logged in to his google account but not have account yet in 'tabzhub'.
+        self.response.out.write("Invalid: Register to 'tabZhub' first!!")
+    else:
+      self.redirect(users.create_login_url(self.request.uri))
+          
 class AlterSessionType(webapp2.RequestHandler):
   def post(self):
     user = users.get_current_user()
@@ -263,6 +287,7 @@ application = webapp2.WSGIApplication([
         ('/session/delete', Delete),
         ('/session/alter/type', AlterSessionType),
         ('/session/alter/name', AlterSessionName),
+		('/fetchbyid', FetchById),
         #(decorator.callback_path, decorator.callback_handler()),
         ], debug=True)
 
