@@ -36,8 +36,7 @@ MISSING_CLIENT_SECRETS_MESSAGE = """
 <code>%s</code>.
 """ % CLIENT_SECRETS
 
-
-http = httplib2.Http(memcache)
+thttp = httplib2.Http(memcache)
 service = discovery.build("plus", "v1", http=http)
 decorator = appengine.oauth2decorator_from_clientsecrets(
                 CLIENT_SECRETS,
@@ -102,6 +101,7 @@ class Index(webapp2.RequestHandler):
           sess['name'] = session.name
           sess['share'] = session.share
           sess['hits'] = session.hits
+          sess['id'] = session.key().id()
           tmp[i] = sess
           i += 1
       #path = os.path.join(os.path.dirname(__file__), 'index.html')
@@ -129,12 +129,14 @@ class Fetch(webapp2.RequestHandler):
       if guser is not None:
         #guser = Guser(gid=user.user_id(), name=user.nickname())
         #guser.put()
-        sessions = Session.all().filter('user = ', guser)
+        sessions = Session.all()
+        sessions.filter('user = ', guser)
+        #sessions.order('created_on')
         #print sessions
         #sessions = Session.gql("Where user = "+ guser).get()
         tmp = {}
         i = 1
-        for session in sessions:
+        for session in sessions.run(limit=5):
           sess = {}
           sess['urls'] = session.urls
           sess['created_on'] = session.created_on.strftime('%Y-%m-%dT%H:%M:%S')
@@ -142,11 +144,12 @@ class Fetch(webapp2.RequestHandler):
           sess['name'] = session.name
           sess['share'] = session.share
           sess['hits'] = session.hits
+          sess['id'] = session.key().id()
           tmp[i] = sess
           i += 1
         self.response.out.write(json.dumps(tmp))
       else:  # Means user logged in to his google account but not have account yet in 'tabzhub'.
-        self.response.out.write("Invalid: Register to 'tabZhub' first!!")
+        self.response.out.write("Invalid")
     else:
       self.redirect(users.create_login_url(self.request.uri))
 
@@ -163,20 +166,17 @@ class Save(webapp2.RequestHandler):
       guser = gusers = Guser.all().filter("email = ", user.email()).get()
       if guser is not None:
         #guser = Guser(gid=user.user_id, name=user.nickname())
-
         #sessions = Session.gql("Where user = "+ guser).get()
-
-         
         name = self.request.get('name')
         urls = self.request.get('urls')
         created_on = datetime.datetime.now()  #self.request.get('created_on')
-        tmp = self.request.get('type')
+        tmp = str(self.request.get('type'))
         _type = False
-        if tmp is 1:  # 0-private, 1 - public(default)
+        if tmp == "on":  # 0-private, 1 - public(default)
           _type = True
                   
         session = Session(user=guser, name=name, urls=urls, \
-                  created_on=created_on)
+                  created_on=created_on, public=_type)
         session.put()
         guser.sessions_no = guser.sessions_no + 1
         guser.put()
@@ -186,10 +186,83 @@ class Save(webapp2.RequestHandler):
     else:
       self.redirect(users.create_login_url(self.request.uri))
 
+class AlterSessionType(webapp2.RequestHandler):
+  def post(self):
+    user = users.get_current_user()
+    if user:
+      guser = gusers = Guser.all().filter("email = ", user.email()).get()
+      if guser is not None:
+        #me =  service.people().get(userId='me').execute()
+        _id = self.request.get("id")
+        session = Session.get_by_id( int(_id) )
+        if session is not None and session.user.key().id() == guser.key().id():
+          if session.public is False:
+            session.public = True
+            session.put()
+          else:
+            session.public = False
+            session.put()
+          self.response.out.write("ok")  #"Saved Successfully :)")
+        else: # Means user logged in to his google account but not have account yet in 'tabzhub'.
+          self.response.out.write("Invalid session/request")
+      else: # Means user logged in to his google account but not have account yet in 'tabzhub'.
+        self.response.out.write("Invalid: Register to 'tabZhub' first!!")
+    else:
+      self.redirect(users.create_login_url(self.request.uri))
+
+class AlterSessionName(webapp2.RequestHandler):
+  def post(self):
+    user = users.get_current_user()
+    if user:
+      guser = gusers = Guser.all().filter("email = ", user.email()).get()
+      if guser is not None:
+        #me =  service.people().get(userId='me').execute()
+        _id = self.request.get("id")
+        session = Session.get_by_id( int(_id) )
+        new_name = self.request.get("new_name")
+        if session is not None and session.user.key().id() == guser.key().id():
+          if new_name is not None:
+            session.name = new_name
+            session.put()
+            self.response.out.write("ok")  # Saved Successfully
+          else:
+            self.response.out.write("Invalid Session name")  # When new_name is null/empty.
+        else: # Means user logged in to his google account but not have account yet in 'tabzhub'.
+          self.response.out.write("Invalid session/request")
+      else: # Means user logged in to his google account but not have account yet in 'tabzhub'.
+        self.response.out.write("Invalid: Register to 'tabZhub' first!!")
+    else:
+      self.redirect(users.create_login_url(self.request.uri))
+
+class Delete(webapp2.RequestHandler):
+  def post(self):
+    user = users.get_current_user()
+    if user:
+      guser = gusers = Guser.all().filter("email = ", user.email()).get()
+      if guser is not None:
+        #me =  service.people().get(userId='me').execute()
+        _id = self.request.get("id")
+        session = Session.get_by_id( int(_id) )
+        if session is not None and session.user.key().id() == guser.key().id():
+          session.delete()
+          guser.sessions_no = guser.sessions_no - 1
+          guser.put()
+          self.response.out.write("ok")  #"Saved Successfully :)")
+        else: # Means user logged in to his google account but not have account yet in 'tabzhub'.
+          self.response.out.write("Invalid session/request")
+      else: # Means user logged in to his google account but not have account yet in 'tabzhub'.
+        self.response.out.write("Invalid: Register to 'tabZhub' first!!")
+    else:
+      self.redirect(users.create_login_url(self.request.uri))
+ 
+  
 application = webapp2.WSGIApplication([
+        ('/index', Index),
         ('/fetch', Fetch),
         ('/save', Save),
-        ('/index', Index),
+        ('/session/delete', Delete),
+        ('/session/alter/type', AlterSessionType),
+        ('/session/alter/name', AlterSessionName),
         #(decorator.callback_path, decorator.callback_handler()),
         ], debug=True)
 
