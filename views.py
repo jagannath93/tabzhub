@@ -91,7 +91,7 @@ class Index(webapp2.RequestHandler):
         guser.put()
       else:
         print "guser is already registered!!"
-        sessions = Session.all().filter('user = ', guser)
+        sessions = Session.all().filter('user = ', guser).order("-created_on")
         i = 1
         for session in sessions:
           sess = {}
@@ -122,21 +122,16 @@ class Fetch(webapp2.RequestHandler):
     user = users.get_current_user()
     if user:
       #me =  service.people().get(userId='me').execute()
-      gusers = Guser.all()
-      gusers.filter("email = ", user.email())
-      guser = gusers.get()
-      #guser = Guser.gql("Where gid = "+ user.user_id()).get()
+
+      guser = db.GqlQuery("SELECT * FROM Guser WHERE email = :1", user.email()).get()
       if guser is not None:
-        #guser = Guser(gid=user.user_id(), name=user.nickname())
-        #guser.put()
-        sessions = Session.all()
-        sessions.filter('user = ', guser)
-        #sessions.order('created_on')
-        #print sessions
-        #sessions = Session.gql("Where user = "+ guser).get()
+        sessions = guser.sessions_group
+        sessions = sessions.order("-created_on")
+        #sessions = sessions.fetch(5)
+        
         tmp = {}
         i = 1
-        for session in sessions.run(limit=5):
+        for session in sessions:
           sess = {}
           sess['urls'] = session.urls
           sess['created_on'] = session.created_on.strftime('%Y-%m-%dT%H:%M:%S')
@@ -148,6 +143,8 @@ class Fetch(webapp2.RequestHandler):
           tmp[i] = sess
           i += 1
         self.response.out.write(json.dumps(tmp))
+        
+        #self.response.out.write(sessions)
       else:  # Means user logged in to his google account but not have account yet in 'tabzhub'.
         self.response.out.write("Invalid")
     else:
